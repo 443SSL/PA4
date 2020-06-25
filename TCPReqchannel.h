@@ -43,7 +43,7 @@ private:
             return -1;
         }
 
-        if(bind(sockfd, serv->ai_addr,serv->ai_addrlen) == 1){
+        if(bind(sockfd, serv->ai_addr,serv->ai_addrlen) == -1){
             close(sockfd);
             perror("server: bind");
             return -1;
@@ -70,7 +70,7 @@ private:
             return -1;
         }
 
-        sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        this->sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
         if(sockfd < 0){
             perror("Cannot create socket");
             return -1;

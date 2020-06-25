@@ -4,6 +4,7 @@
 #include "common.h"
 #include "HistogramCollection.h"
 #include "FIFOreqchannel.h"
+#include "TCPReqchannel.h"
 #include <thread>
 #include <sys/wait.h>
 #include <time.h>
@@ -33,7 +34,7 @@ void patient_thread_function(int n, int pno, BoundedBuffer* request_buffer){
     }
 }
 
-void file_thread_function(string fname, BoundedBuffer* request_buffer, FIFORequestChannel* chan, int mb){
+void file_thread_function(string fname, BoundedBuffer* request_buffer, TCPRequestChannel* chan, int mb){
     // 1. create the file
     string recvfname = "recv/" + fname;
 
@@ -63,7 +64,7 @@ void file_thread_function(string fname, BoundedBuffer* request_buffer, FIFOReque
 
 }
 
-void worker_thread_function(FIFORequestChannel* chan, BoundedBuffer *request_buffer ,HistogramCollection* hc, int mb){
+void worker_thread_function(TCPRequestChannel* chan, BoundedBuffer *request_buffer ,HistogramCollection* hc, int mb){
    char buf[1024];
    char recvbuf[mb];
    double resp = 0;
@@ -106,10 +107,12 @@ int main(int argc, char *argv[])
 	int m = MAX_MESSAGE; 	// default capacity of the message buffer
     srand(time_t(NULL));
     string fname = "";
+    string host;
+    string port;
     
     int opt = -1;
 
-    while((opt = getopt(argc, argv, "m:n:b:w:p:f:")) != -1){
+    while((opt = getopt(argc, argv, "m:n:b:w:p:f:h:r:")) != -1){
         switch(opt){
             case 'm':
                 m = atoi(optarg);
@@ -129,16 +132,22 @@ int main(int argc, char *argv[])
             case 'f':
                 fname = optarg;
                 break;
+            case 'h':
+                host = optarg;
+                break;
+            case 'r':
+                port = optarg;
+                break;
         }
     }
     
-    int pid = fork();
-    if (pid == 0){
-		// modify this to pass along m
-        execl ("server", "server", (char *)NULL);
-    }
+    // int pid = fork();
+    // if (pid == 0){
+	// 	// modify this to pass along m
+    //     execl ("server", "server", (char *)NULL);
+    // }
     
-	FIFORequestChannel* chan = new FIFORequestChannel("control", FIFORequestChannel::CLIENT_SIDE);
+	TCPRequestChannel* chan = new TCPRequestChannel(host, port, FIFORequestChannel::CLIENT_SIDE);
     BoundedBuffer request_buffer(b);
 	HistogramCollection hc;
 
@@ -148,9 +157,9 @@ int main(int argc, char *argv[])
     }
 
     // making worker channels
-    FIFORequestChannel* wchans[w];
+    TCPRequestChannel* wchans[w];
     for(int i = 0; i < w; i++){
-        wchans[i] = create_new_channel(chan);
+        wchans[i] = new TCPRequestChannel(host,port, FIFORequestChannel::CLIENT_SIDE);
     }
 	
     struct timeval start, end;
